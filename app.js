@@ -3,6 +3,24 @@
 // ============================
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const showSection = (sectionId) => {
+    const target = document.getElementById(sectionId);
+    if (!target) return null;
+
+    document.querySelectorAll('main section').forEach(sec => sec.classList.remove('active'));
+    target.classList.add('active');
+    return target;
+};
+
+const ensureRelatedCarouselInit = () => {
+    if (typeof initRelatedCarousel === 'function') {
+        initRelatedCarousel();
+    }
+};
 
 // ============================
 // DETALLES DE PROPIEDADES + MAPA
@@ -52,43 +70,39 @@ function mostrarDetalle(propiedad) {
     
     detalle.innerHTML = detalleTemplate(propiedad);
 
-    // Mostrar solo la sección de detalle
-    document.querySelectorAll("main section").forEach(sec => sec.classList.remove("active"));
-    document.getElementById("detalle-propiedad").classList.add("active");
+    showSection("detalle-propiedad");
 
-    // Inicializar slider principal
     const slider = document.querySelector("#detalle-propiedad .slider");
     if (slider) initSlider(slider);
+    initLightbox(detalle);
 
-    // Inicializar carrusel de propiedades relacionadas
-    setTimeout(() => {
-        if (typeof initRelatedCarousel === 'function') {
-            initRelatedCarousel();
-        }
-    }, 100);
+    setTimeout(ensureRelatedCarouselInit, 100);
 
-    // Inicializar mapa
+
     if (propiedad.coords && typeof L !== 'undefined') {
         setTimeout(() => {
             const mapEl = document.getElementById("detalle-mapa");
             if (mapEl && !mapEl._leaflet_id) {
-                const map = L.map(mapEl).setView(propiedad.coords, 16);
+                const map = L.map(mapEl, {
+                    scrollWheelZoom: false,
+                    doubleClickZoom: false,
+                    boxZoom: false,
+                    keyboard: false
+                }).setView(propiedad.coords, 16);
                 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
                 L.marker(propiedad.coords).addTo(map);
             }
         }, 200);
     }
 
-    // Scroll al inicio
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToTop();
 }
 
 // Event listener para botón "Volver"
 document.addEventListener("click", (e) => {
     if (e.target.id === "volver-listado") {
-        document.querySelectorAll("main section").forEach(sec => sec.classList.remove("active"));
-        document.getElementById("compra").classList.add("active");
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        showSection('compra');
+        scrollToTop();
     }
 });
 
@@ -127,12 +141,8 @@ document.addEventListener("DOMContentLoaded", () => {
         link.addEventListener('click', e => {
             e.preventDefault();
             const targetId = link.getAttribute('href').substring(1);
-            const targetSection = document.getElementById(targetId);
+            const targetSection = showSection(targetId);
             if (!targetSection) return;
-
-            // Cambiar sección activa
-            sections.forEach(sec => sec.classList.remove('active'));
-            targetSection.classList.add('active');
 
             // Cerrar menú responsive
             if (menu && menu.classList.contains('active')) {
@@ -140,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // Scroll al inicio con offset para evitar superposición con header
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            scrollToTop();
         });
     });
 });
@@ -315,59 +325,93 @@ const initPropertyMap = (mapContainer) => {
 // LIGHTBOX PARA IMÁGENES
 // ============================
 
-/**
- * Sistema de lightbox para ampliar imágenes
- */
-document.addEventListener("DOMContentLoaded", () => {
-    // Crear elementos del lightbox
-    const lightbox = document.createElement('div');
-    lightbox.classList.add('lightbox');
+let lightboxEl;
+let lightboxImg;
+let lightboxPrev;
+let lightboxNext;
+let lightboxImages = [];
+let lightboxIndex = 0;
 
-    const lbImg = document.createElement('img');
-    const lbPrev = document.createElement('button');
-    const lbNext = document.createElement('button');
+const updateLightboxImage = () => {
+    if (!lightboxImages.length || !lightboxImg) return;
+    const current = lightboxImages[lightboxIndex];
+    lightboxImg.src = current?.src || "";
+    lightboxImg.alt = current?.alt || "";
+};
 
-    lbPrev.className = 'lb-btn lb-prev';
-    lbPrev.textContent = '‹';
-    lbNext.className = 'lb-btn lb-next';
-    lbNext.textContent = '›';
+    const ensureLightbox = () => {
+    if (lightboxEl) return;
 
-    lightbox.append(lbImg, lbPrev, lbNext);
-    document.body.appendChild(lightbox);
+    lightboxEl = document.createElement('div');
+    lightboxEl.classList.add('lightbox');
 
-    let currentImgs = [];
-    let lbIndex = 0;
+    lightboxImg = document.createElement('img');
+    lightboxPrev = document.createElement('button');
+    lightboxNext = document.createElement('button');
 
-    // Abrir lightbox al hacer click en imagen
-    document.querySelectorAll('.property__media img').forEach(img => {
+    lightboxPrev.className = 'lb-btn lb-prev';
+    lightboxPrev.textContent = '‹';
+    lightboxNext.className = 'lb-btn lb-next';
+    lightboxNext.textContent = '›';
+
+
+    lightboxEl.append(lightboxImg, lightboxPrev, lightboxNext);
+    document.body.appendChild(lightboxEl);
+
+    const cycle = (step) => {
+        if (!lightboxImages.length) return;
+        lightboxIndex = (lightboxIndex + step + lightboxImages.length) % lightboxImages.length;
+        updateLightboxImage();
+    };
+
+    lightboxPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cycle(-1);
+    });
+
+    lightboxNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cycle(1);
+    });
+
+    lightboxEl.addEventListener('click', () => {
+        lightboxEl.classList.remove('show');
+        lightboxImages = [];
+    });
+};
+
+
+export function initLightbox(container = document) {
+    ensureLightbox();
+
+    const scope = container instanceof Element ? container : document;
+    const images = scope.querySelectorAll?.('.property__media img') || [];
+
+    images.forEach((img) => {
+        if (img.dataset.lightboxBound === 'true') return;
+
+        img.dataset.lightboxBound = 'true';
         img.style.cursor = 'zoom-in';
+
         img.addEventListener('click', () => {
-            const slides = img.closest('.slides').querySelectorAll('img');
-            currentImgs = Array.from(slides);
-            lbIndex = currentImgs.indexOf(img);
-            lbImg.src = currentImgs[lbIndex].src;
-            lightbox.classList.add('show');
+            const slider = img.closest('.slider');
+            const slides = slider?.querySelectorAll('.slides img');
+            if (!slides || !slides.length) return;
+
+            lightboxImages = Array.from(slides);
+            lightboxIndex = lightboxImages.indexOf(img);
+            if (lightboxIndex < 0) lightboxIndex = 0;
+
+            updateLightboxImage();
+            lightboxEl?.classList.add('show');
         });
     });
+}
 
-    // Navegación del lightbox
-    lbPrev.addEventListener('click', (e) => {
-        e.stopPropagation();
-        lbIndex = (lbIndex - 1 + currentImgs.length) % currentImgs.length;
-        lbImg.src = currentImgs[lbIndex].src;
-    });
+if (typeof window !== 'undefined') {
+    window.initLightbox = initLightbox;
+}
 
-    lbNext.addEventListener('click', (e) => {
-        e.stopPropagation();
-        lbIndex = (lbIndex + 1) % currentImgs.length;
-        lbImg.src = currentImgs[lbIndex].src;
-    });
-
-    // Cerrar lightbox
-    lightbox.addEventListener('click', () => {
-        lightbox.classList.remove('show');
-    });
-});
 
 // ============================
 // FORMULARIOS
@@ -377,15 +421,19 @@ document.addEventListener("DOMContentLoaded", () => {
  * Validación del formulario de contacto
  */
 document.addEventListener("DOMContentLoaded", () => {
-    const form = document.querySelector("form");
+    const form = document.querySelector("#contact-form");
     if (!form) return;
+
+    const nombreInput = form.querySelector("#nombre");
+    const emailInput = form.querySelector("#email");
+    const mensajeInput = form.querySelector("#mensaje");
 
     form.addEventListener("submit", (e) => {
         e.preventDefault();
 
-        const nombre = form.querySelector("input[type='text']").value.trim();
-        const email = form.querySelector("input[type='email']").value.trim();
-        const mensaje = form.querySelector("textarea").value.trim();
+        const nombre = nombreInput?.value.trim() ?? "";
+        const email = emailInput?.value.trim() ?? "";
+        const mensaje = mensajeInput?.value.trim() ?? "";
 
         // Validaciones
         if (nombre.length < 3) {
@@ -424,7 +472,8 @@ function renderPropiedades(lista) {
     }
     
     cardsCompra.innerHTML = lista.map(cardTemplate).join("");
-    document.querySelectorAll(".slider", cardsCompra).forEach(initSlider);
+    cardsCompra.querySelectorAll(".slider").forEach(initSlider);
+    initLightbox(cardsCompra);
 }
 
 // ============================
@@ -441,27 +490,22 @@ document.addEventListener("DOMContentLoaded", () => {
         ctaButton.addEventListener('click', (e) => {
             e.preventDefault();
 
-            const sections = document.querySelectorAll('main section');
-            const targetSection = document.getElementById('contacto');
+            const targetSection = showSection('contacto');
             const menu = document.querySelector('.nav__menu');
 
-            if (targetSection) {
-                sections.forEach(sec => sec.classList.remove('active'));
-                targetSection.classList.add('active');
-
-                if (menu && menu.classList.contains('active')) {
-                    menu.classList.remove('active');
-                }
-
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                setTimeout(() => {
-                    const firstInput = targetSection.querySelector('#nombre');
-                    if (firstInput) {
-                        firstInput.focus();
-                    }
-                }, 500);
+            if (targetSection && menu && menu.classList.contains('active')) {
+                menu.classList.remove('active');
             }
+            if (!targetSection) return;
+
+            scrollToTop();
+
+            setTimeout(() => {
+                const firstInput = targetSection.querySelector('#nombre');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }, 500);
         });
     }
 });
@@ -472,115 +516,20 @@ document.addEventListener("DOMContentLoaded", () => {
 /**
  * Navegación a detalles desde tarjetas principales - CORREGIDO
  */
-document.addEventListener("click", (e) => { 
+document.addEventListener("click", (e) => {
     const btn = e.target.closest(".toggle-details");
     if (!btn) return;
 
     e.preventDefault();
 
-    // -----------------------------
-    // Cambiar sección: ocultar inicio y mostrar compra
-    // -----------------------------
-    const sections = document.querySelectorAll('main section');
-    const seccionCompra = document.getElementById('compra');
-    if (!seccionCompra) return;
-
-    sections.forEach(sec => sec.classList.remove('active')); // ocultar todas
-    seccionCompra.classList.add('active'); // mostrar compra
-
-    
-    
-    const id = btn.closest(".property").dataset.id;
-    if (typeof PROPIEDADES === 'undefined') return;
-    
-    const propiedad = PROPIEDADES.find(p => p.id === id);
-    if (!propiedad) return;
-
-    // Mostrar detalles de la propiedad
-    mostrarDetalle(propiedad);
-
-    
-    // Scroll al inicio
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-
-
-
-
-
-
-/**
- * Navegación desde propiedades relacionadas
- */
-document.addEventListener("click", (e) => {
-    const relatedCard = e.target.closest(".related-card");
-    if (!relatedCard) return;
-
-    e.preventDefault();
-    const id = relatedCard.dataset.id;
-    if (typeof PROPIEDADES === 'undefined') return;
+    const propertyEl = btn.closest(".property");
+    const id = propertyEl?.dataset.id;
+    if (!id || typeof PROPIEDADES === 'undefined') return;
     
     const propiedad = PROPIEDADES.find(p => p.id === id);
     if (!propiedad) return;
 
     mostrarDetalle(propiedad);
-});
-
-/**
- * Mostrar vista detallada de una propiedad
- */
-function mostrarDetalle(propiedad) {
-    const detalle = document.getElementById("detalle-contenido");
-    if (!detalle || typeof detalleTemplate === 'undefined') return;
-    
-    detalle.innerHTML = detalleTemplate(propiedad);
-
-    // Mostrar solo la sección de detalle
-    document.querySelectorAll("main section").forEach(sec => sec.classList.remove("active"));
-    document.getElementById("detalle-propiedad").classList.add("active");
-
-    // Inicializar slider principal
-    const slider = document.querySelector("#detalle-propiedad .slider");
-    if (slider) initSlider(slider);
-
-    // Inicializar carrusel de propiedades relacionadas
-    setTimeout(() => {
-        if (typeof initRelatedCarousel === 'function') {
-            initRelatedCarousel();
-        }
-    }, 100);
-
-    // Inicializar mapa con configuración sin interferencia de scroll
-    if (propiedad.coords && typeof L !== 'undefined') {
-        setTimeout(() => {
-            const mapEl = document.getElementById("detalle-mapa");
-            if (mapEl && !mapEl._leaflet_id) {
-                const map = L.map(mapEl, {
-                    scrollWheelZoom: false,
-                    doubleClickZoom: false,
-                    boxZoom: false,
-                    keyboard: false
-                }).setView(propiedad.coords, 16);
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { 
-                    maxZoom: 19 
-                }).addTo(map);
-                L.marker(propiedad.coords).addTo(map);
-            }
-        }, 200);
-    }
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-/**
- * Botón volver al listado
- */
-document.addEventListener("click", (e) => {
-    if (e.target.id === "volver-listado") {
-        document.querySelectorAll("main section").forEach(sec => sec.classList.remove("active"));
-        document.getElementById("compra").classList.add("active");
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    }
 });
 
 // ============================
@@ -657,23 +606,17 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("click", (e) => {
     if (e.target.classList.contains("btn-ver-todas")) {
         e.preventDefault();
-        
-        const sections = document.querySelectorAll('main section');
-        const seccionCompra = document.getElementById('compra');
+
+        const seccionCompra = showSection('compra');
         const menu = document.querySelector('.nav__menu');
         
         if (seccionCompra) {
-            // Cambiar a la sección de compra
-            sections.forEach(sec => sec.classList.remove('active'));
-            seccionCompra.classList.add('active');
             
             // Cerrar menú si está abierto
             if (menu && menu.classList.contains('active')) {
                 menu.classList.remove('active');
             }
-            
-            // Scroll al inicio
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            scrollToTop();
         }
     }
 });
