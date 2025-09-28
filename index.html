@@ -59,7 +59,7 @@
     </header>
 
     <!-- ========== CONTENIDO PRINCIPAL ========== -->
-    <main>
+    <main id="contenido">
 
         <!-- ===== SECCIÓN INICIO ===== -->
         <section id="inicio" class="main-section">
@@ -72,13 +72,13 @@
                 </div>
                 <!-- Indicadores -->
                 <div class="carousel__indicators">
-                    <span class="active"></span>
-                    <span></span>
-                    <span></span>
+                    <button type="button" class="active" aria-label="Ir al slide 1" aria-current="true"></button>
+                    <button type="button" aria-label="Ir al slide 2"></button>
+                    <button type="button" aria-label="Ir al slide 3"></button>
                 </div>
                 <!-- Flechas -->
-                <button class="carousel__btn prev">&#10094;</button>
-                <button class="carousel__btn next">&#10095;</button>
+                <button class="carousel__btn prev" type="button" aria-label="Anterior">&#10094;</button>
+                <button class="carousel__btn next" type="button" aria-label="Siguiente">&#10095;</button>
             </div>
 
             <!-- Beneficios -->
@@ -234,10 +234,10 @@
 
             <div class="container">
                 <div class="listings__head">
-                    <h2 id="t-propiedades">Propiedades</h2>
+                    <h2 id="t-propiedades-compra">Propiedades</h2>
                 </div>
                 <!-- Contenedor para todas las propiedades -->
-                <div class="cards" id="cards-compra"></div>
+                <div class="cards" id="cards-compra" aria-live="polite"></div>
             </div>
         </section>
 
