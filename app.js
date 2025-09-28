@@ -249,9 +249,10 @@ document.addEventListener("DOMContentLoaded", () => {
  * Carrusel principal de la página de inicio
  */
 document.addEventListener("DOMContentLoaded", () => {
+    const carousel = document.querySelector(".carousel");
     const track = document.querySelector(".carousel__track");
     const slides = document.querySelectorAll(".carousel__slide");
-    const indicators = document.querySelectorAll(".carousel__indicators span");
+    const indicators = document.querySelectorAll(".carousel__indicators button");
     const prevBtn = document.querySelector(".carousel__btn.prev");
     const nextBtn = document.querySelector(".carousel__btn.next");
 
@@ -259,6 +260,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let currentIndex = 0;
     const slideCount = slides.length;
+    let autoSlideInterval = null;
 
     const showSlide = (index) => {
         track.style.transform = `translateX(-${index * 100}%)`;
@@ -289,8 +291,53 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Auto-slide cada 4 segundos
-    setInterval(nextSlide, 4000);
+        const stopAutoSlide = () => {
+        if (autoSlideInterval !== null) {
+            clearInterval(autoSlideInterval);
+            autoSlideInterval = null;
+        }
+    };
+
+    const startAutoSlide = () => {
+        if (autoSlideInterval === null) {
+            autoSlideInterval = setInterval(nextSlide, 4000);
+        }
+    };
+
+    const isCarouselVisible = () => {
+        if (!carousel) return false;
+        const rect = carousel.getBoundingClientRect();
+        const { innerHeight, innerWidth } = window;
+        return (
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.bottom > 0 &&
+            rect.right > 0 &&
+            rect.top < innerHeight &&
+            rect.left < innerWidth
+        );
+    };
+
+    if (carousel && "IntersectionObserver" in window) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    startAutoSlide();
+                } else {
+                    stopAutoSlide();
+                }
+            });
+        }, { threshold: 0.1 });
+
+        observer.observe(carousel);
+
+        if (isCarouselVisible()) {
+            startAutoSlide();
+        }
+    } else {
+        startAutoSlide();
+    }
+
     showSlide(0);
 });
 
@@ -303,6 +350,7 @@ export function initSlider(slider) {
     const prev = slider.querySelector(".prev");
     const next = slider.querySelector(".next");
     let idx = 0;
+    let autoSlideTimer = null;
 
     if (imgs.length === 0) return;
 
@@ -313,13 +361,34 @@ export function initSlider(slider) {
         }
     };
 
+    const stopAutoSlide = () => {
+        if (autoSlideTimer !== null) {
+            clearInterval(autoSlideTimer);
+            autoSlideTimer = null;
+        }
+    };
+
+    const startAutoSlide = () => {
+        if (imgs.length <= 1 || autoSlideTimer !== null) return;
+        autoSlideTimer = setInterval(() => {
+            show(idx + 1);
+        }, 4000);
+    };
+
+    const restartAutoSlide = () => {
+        stopAutoSlide();
+        startAutoSlide();
+    };
+
     prev?.addEventListener("click", (e) => {
         e.stopPropagation();
         show(idx - 1);
+        restartAutoSlide();
     });
     next?.addEventListener("click", (e) => {
         e.stopPropagation();
         show(idx + 1);
+        restartAutoSlide();
     });
 
     // Configurar el contenedor de slides sin modificar el width
@@ -335,6 +404,27 @@ export function initSlider(slider) {
     }
 
     show(0);
+
+    const handleVisibility = (isVisible) => {
+        if (isVisible) {
+            startAutoSlide();
+        } else {
+            stopAutoSlide();
+        }
+    };
+
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => handleVisibility(entry.isIntersecting));
+        }, { threshold: 0.25 });
+
+        observer.observe(slider);
+    } else {
+        startAutoSlide();
+    }
+
+    slider.addEventListener('mouseenter', stopAutoSlide);
+    slider.addEventListener('mouseleave', startAutoSlide);
 }
 
 /**
