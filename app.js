@@ -1,7 +1,9 @@
+import { norm, validateEmail } from './utils.js';
+import { PROPIEDADES, cardTemplate, detalleTemplate, renderPropiedadesDestacadas } from './propiedades.js';
 // ============================
 // UTILIDADES
 // ============================
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
 
 const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -56,7 +58,7 @@ document.addEventListener("click", (e) => {
     e.preventDefault();
     const id = relatedCard.dataset.id;
     if (typeof PROPIEDADES === 'undefined') return;
-    
+
     const propiedad = PROPIEDADES.find(p => p.id === id);
     if (!propiedad) return;
 
@@ -67,7 +69,7 @@ document.addEventListener("click", (e) => {
 function mostrarDetalle(propiedad) {
     const detalle = document.getElementById("detalle-contenido");
     if (!detalle || typeof detalleTemplate === 'undefined') return;
-    
+
     detalle.innerHTML = detalleTemplate(propiedad);
 
     showSection("detalle-propiedad");
@@ -211,7 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
 /**
  * Carruseles individuales de propiedades
  */
-function initSlider(slider) {
+export function initSlider(slider) {
     const slides = slider.querySelector(".slides");
     const imgs = slides ? slides.querySelectorAll("img") : [];
     const prev = slider.querySelector(".prev");
@@ -227,15 +229,15 @@ function initSlider(slider) {
         }
     };
 
-    prev?.addEventListener("click", (e) => { 
-        e.stopPropagation(); 
-        show(idx - 1); 
+    prev?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        show(idx - 1);
     });
-    next?.addEventListener("click", (e) => { 
-        e.stopPropagation(); 
-        show(idx + 1); 
+    next?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        show(idx + 1);
     });
-    
+
     // Configurar el contenedor de slides sin modificar el width
     if (slides) {
         slides.style.display = 'flex';
@@ -247,14 +249,14 @@ function initSlider(slider) {
             img.style.flexShrink = '0';
         });
     }
-    
+
     show(0);
 }
 
 /**
  * Carrusel de propiedades relacionadas
  */
-function initRelatedCarousel() {
+export function initRelatedCarousel() {
     const track = document.querySelector(".related-track");
     const cards = document.querySelectorAll(".related-card");
     const prevBtn = document.querySelector(".related-prev");
@@ -339,7 +341,7 @@ const updateLightboxImage = () => {
     lightboxImg.alt = current?.alt || "";
 };
 
-    const ensureLightbox = () => {
+const ensureLightbox = () => {
     if (lightboxEl) return;
 
     lightboxEl = document.createElement('div');
@@ -459,18 +461,18 @@ document.addEventListener("DOMContentLoaded", () => {
 /**
  * Renderizar propiedades en el listado
  */
-function renderPropiedades(lista) {
+export function renderPropiedades(lista) {
     const cardsCompra = document.getElementById("cards-compra");
     if (!cardsCompra) return;
-    
+
     if (!lista.length) {
-        cardsCompra.innerHTML = 
+        cardsCompra.innerHTML =
             `<p style="padding:1rem;text-align:center;color:#6b7280">
                 No encontramos resultados. Ajusta los filtros y vuelve a intentar.
             </p>`;
         return;
     }
-    
+
     cardsCompra.innerHTML = lista.map(cardTemplate).join("");
     cardsCompra.querySelectorAll(".slider").forEach(initSlider);
     initLightbox(cardsCompra);
@@ -525,7 +527,7 @@ document.addEventListener("click", (e) => {
     const propertyEl = btn.closest(".property");
     const id = propertyEl?.dataset.id;
     if (!id || typeof PROPIEDADES === 'undefined') return;
-    
+
     const propiedad = PROPIEDADES.find(p => p.id === id);
     if (!propiedad) return;
 
@@ -609,9 +611,9 @@ document.addEventListener("click", (e) => {
 
         const seccionCompra = showSection('compra');
         const menu = document.querySelector('.nav__menu');
-        
+
         if (seccionCompra) {
-            
+
             // Cerrar menú si está abierto
             if (menu && menu.classList.contains('active')) {
                 menu.classList.remove('active');

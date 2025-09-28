@@ -1,7 +1,10 @@
+import { renderPropiedades, initSlider, initRelatedCarousel } from './app.js';
+import { $, norm, CLP } from './utils.js';
+
 /* ============================
 DATOS DE PROPIEDADES
    ============================ */
-const PROPIEDADES = [
+export const PROPIEDADES = [
     {
         id: "AB-0001",
         operacion: "Venta",
@@ -101,17 +104,11 @@ const PROPIEDADES = [
 ];
 
 /* ============================
-   FUNCIONES AUXILIARES
+FUNCIONES AUXILIARES
    ============================ */
 
-const $ = (sel, ctx = document) => ctx.querySelector(sel);
-const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
-const norm = (s = "") =>
-    s.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-const CLP = (n) => n.toLocaleString("es-CL");
-
 /* ============================
-   LÓGICA DE PROPIEDADES RELACIONADAS
+LÓGICA DE PROPIEDADES RELACIONADAS
    ============================ */
 
 /**
@@ -151,7 +148,7 @@ function getPropiedadesDestacadas(limite = 3) {
 }
 
 /* ============================
-   PLANTILLAS HTML
+PLANTILLAS HTML
    ============================ */
 
 /**
@@ -177,7 +174,7 @@ function relacionadaTemplate(p) {
 /**
  * Plantilla principal para tarjetas de propiedades en el listado
  */
-function cardTemplate(p) {
+export function cardTemplate(p) {
     const imgs = p.imagenes
         .map((src) => `<img src="${src}" alt="${p.titulo}" loading="lazy" />`)
         .join("");
@@ -255,7 +252,7 @@ function cardTemplate(p) {
 /**
  * Plantilla para vista detallada individual de propiedad
  */
-function detalleTemplate(p) {
+export function detalleTemplate(p) {
     const relacionadas = getPropiedadesRelacionadas(p);
     const relacionadasHtml = relacionadas.length > 0 ? `
         <div class="related-properties">
@@ -465,29 +462,15 @@ function detalleTemplate(p) {
 }
 
 /* ============================
-   RENDERIZADO DE PROPIEDADES
+RENDERIZADO DE PROPIEDADES
    ============================ */
 
 const cardsCompra = $("#cards-compra");
 
-function renderPropiedades(lista) {
-    if (!cardsCompra) return;
-    if (!lista.length) {
-        cardsCompra.innerHTML =
-            `<p style="padding:1rem;text-align:center;color:#6b7280">No encontramos resultados. Ajusta los filtros y vuelve a intentar.</p>`;
-        return;
-    }
-    // Render
-    cardsCompra.innerHTML = lista.map(cardTemplate).join("");
-
-    // Inicializa carruseles por tarjeta
-    $$(".slider", cardsCompra).forEach(initSlider);
-}
-
 /**
  * Renderizar propiedades destacadas en la sección de inicio
  */
-function renderPropiedadesDestacadas() {
+export function renderPropiedadesDestacadas() {
     const container = document.getElementById("propiedades-destacadas");
     if (!container) return;
 
@@ -505,72 +488,7 @@ function renderPropiedadesDestacadas() {
 }
 
 /* ============================
-   CONTROLES DE SLIDER/CARRUSEL
-   ============================ */
-
-/**
- * Inicializa el slider para cada tarjeta de propiedad
- */
-function initSlider(slider) {
-    const slides = $(".slides", slider);
-    const imgs = $$("img", slides);
-    const prev = $(".prev", slider);
-    const next = $(".next", slider);
-    let idx = 0;
-
-    const show = (i) => {
-        idx = (i + imgs.length) % imgs.length;
-        slides.style.transform = `translateX(-${idx * 100}%)`;
-    };
-
-    prev?.addEventListener("click", (e) => { e.stopPropagation(); show(idx - 1); });
-    next?.addEventListener("click", (e) => { e.stopPropagation(); show(idx + 1); });
-    show(0);
-}
-
-/**
- * Inicializar carrusel de propiedades relacionadas
- */
-function initRelatedCarousel() {
-    const track = $(".related-track");
-    const cards = $$(".related-card");
-    const prevBtn = $(".related-prev");
-    const nextBtn = $(".related-next");
-
-    if (!track || cards.length === 0) return;
-
-    let currentIndex = 0;
-    const cardWidth = 280; // ancho de cada tarjeta + gap
-    const visibleCards = Math.floor(track.parentElement.offsetWidth / cardWidth);
-    const maxIndex = Math.max(0, cards.length - visibleCards);
-
-    const updateCarousel = () => {
-        track.style.transform = `translateX(-${currentIndex * cardWidth}px)`;
-
-        // Actualizar estado de botones
-        prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
-        nextBtn.style.opacity = currentIndex >= maxIndex ? '0.5' : '1';
-    };
-
-    prevBtn?.addEventListener("click", () => {
-        if (currentIndex > 0) {
-            currentIndex--;
-            updateCarousel();
-        }
-    });
-
-    nextBtn?.addEventListener("click", () => {
-        if (currentIndex < maxIndex) {
-            currentIndex++;
-            updateCarousel();
-        }
-    });
-
-    updateCarousel();
-}
-
-/* ============================
-   EVENT LISTENERS
+EVENT LISTENERS
    ============================ */
 
 // Delegación para "Más detalles" + mapa por tarjeta
@@ -630,4 +548,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Render inicial
     renderPropiedades(PROPIEDADES);
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    initRelatedCarousel();
 });
