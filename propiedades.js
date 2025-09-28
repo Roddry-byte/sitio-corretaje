@@ -179,13 +179,8 @@ export function cardTemplate(p) {
         .map((src) => `<img src="${src}" alt="${p.titulo}" loading="lazy" />`)
         .join("");
 
-    const detalles = (p.detalles || []).map((d) => `<li>${d}</li>`).join("");
-
     return `
-    <article class="card property" 
-            data-lat="${p.coords?.[0] || ""}" 
-            data-lng="${p.coords?.[1] || ""}"
-            data-id="${p.id}">
+    <article class="card property" data-id="${p.id}">
         
         <div class="property__media slider" data-count="${p.imagenes.length}">
             <div class="slides">
@@ -221,29 +216,8 @@ export function cardTemplate(p) {
             </div>
 
             <div class="property__cta">
-                <button class="btn btn--outline toggle-details" type="button">Más detalles</button>
+                <button class="btn btn--outline btn-mas-detalles" type="button">Más detalles</button>
                 <a class="btn btn--primary" href="#contacto">Agendar visita</a>
-            </div>
-        </div>
-
-        <div class="property__details hidden">
-            <div class="sheet">
-                <div class="sheet__grid">
-                    <div class="sheet__content">
-                        <p>${p.descripcion}</p>
-                        ${detalles ? `<ul class="list list--check">${detalles}</ul>` : ""}
-                        <div class="kv" style="margin-top:.75rem">
-                            <div><dt>Superficie útil</dt><dd>${p.superficieUtil} m²</dd></div>
-                            <div><dt>Terraza</dt><dd>${p.terraza || 0} m²</dd></div>
-                            <div><dt>Estac.</dt><dd>${p.estacionamientos || 0}</dd></div>
-                            <div><dt>Bodega</dt><dd>${p.bodegas || 0}</dd></div>
-                        </div>
-                    </div>
-                    <aside class="sheet__aside">
-                        <h3>Ubicación</h3>
-                        <div class="property-map" style="width:100%;height:210px;border-radius:8px"></div>
-                    </aside>
-                </div>
             </div>
         </div>
     </article>`;
@@ -465,8 +439,6 @@ export function detalleTemplate(p) {
 RENDERIZADO DE PROPIEDADES
    ============================ */
 
-const cardsCompra = $("#cards-compra");
-
 /**
  * Renderizar propiedades destacadas en la sección de inicio
  */
@@ -486,35 +458,6 @@ export function renderPropiedadesDestacadas() {
     // Inicializar sliders de las tarjetas
     container.querySelectorAll(".slider").forEach(initSlider);
 }
-
-/* ============================
-EVENT LISTENERS
-   ============================ */
-
-// Delegación para "Más detalles" + mapa por tarjeta
-cardsCompra?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".toggle-details");
-    if (!btn) return;
-
-    const card = btn.closest(".property");
-    const details = $(".property__details", card);
-    const wasHidden = details.classList.contains("hidden");
-
-    details.classList.toggle("hidden");
-    btn.textContent = wasHidden ? "Menos detalles" : "Más detalles";
-
-    // Carga perezosa del mapa cuando se abre
-    if (wasHidden) {
-        const lat = parseFloat(card.dataset.lat);
-        const lng = parseFloat(card.dataset.lng);
-        const mapEl = $(".property-map", details);
-        if (mapEl && typeof L !== "undefined" && !mapEl._leaflet_id && !Number.isNaN(lat) && !Number.isNaN(lng)) {
-            const map = L.map(mapEl).setView([lat, lng], 16);
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
-            L.marker([lat, lng]).addTo(map);
-        }
-    }
-});
 
 // Filtros del buscador
 document.addEventListener("DOMContentLoaded", () => {

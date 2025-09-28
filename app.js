@@ -27,25 +27,6 @@ const ensureRelatedCarouselInit = () => {
 // ============================
 // DETALLES DE PROPIEDADES + MAPA
 // ============================
-document.addEventListener("DOMContentLoaded", () => {
-    // Toggle detalles con inicialización de mapas
-    document.querySelectorAll('.toggle-details').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const details = btn.closest('.property').querySelector('.property__details');
-            const isHidden = details.classList.contains('hidden');
-
-            details.classList.toggle('hidden');
-            btn.textContent = isHidden ? "Menos detalles" : "Más detalles";
-
-            // Inicializar mapa si se está mostrando y no existe
-            if (isHidden && details.querySelector('#property-map')) {
-                initPropertyMap(details.querySelector('#property-map'));
-            }
-        });
-    });
-
-});
-
 // ============================
 // MANEJO DE PROPIEDADES RELACIONADAS Y NAVEGACIÓN A DETALLES
 // ============================
@@ -519,7 +500,7 @@ document.addEventListener("DOMContentLoaded", () => {
  * Navegación a detalles desde tarjetas principales - CORREGIDO
  */
 document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".toggle-details");
+    const btn = e.target.closest(".btn-mas-detalles");
     if (!btn) return;
 
     e.preventDefault();
