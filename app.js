@@ -1,5 +1,121 @@
 import { norm, validateEmail } from './utils.js';
 import { PROPIEDADES, cardTemplate, detalleTemplate, renderPropiedadesDestacadas } from './propiedades.js';
+
+const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+const LEAFLET_SCRIPT_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js';
+
+let leafletModulePromise = null;
+let leafletCssLoaded = false;
+
+const loadLeafletCSS = () => {
+    if (leafletCssLoaded || typeof document === 'undefined') return Promise.resolve();
+
+    const existing = document.querySelector('link[data-leaflet-css]');
+    if (existing) {
+        leafletCssLoaded = true;
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = LEAFLET_CSS_URL;
+        link.dataset.leafletCss = 'true';
+        link.setAttribute('data-leaflet-css', 'true');
+
+        link.addEventListener('load', () => {
+            leafletCssLoaded = true;
+            resolve();
+        });
+
+        link.addEventListener('error', () => {
+            console.error('No se pudo cargar la hoja de estilos de Leaflet.');
+            resolve();
+        });
+
+        document.head.appendChild(link);
+    });
+};
+
+async function loadLeafletModule() {
+    if (leafletModulePromise || typeof window === 'undefined') {
+        return leafletModulePromise;
+    }
+
+    leafletModulePromise = (async () => {
+        await loadLeafletCSS();
+        const module = await import(LEAFLET_SCRIPT_URL);
+        return module?.default ?? module;
+    })().catch((error) => {
+        leafletModulePromise = null;
+        console.error('No se pudo cargar Leaflet:', error);
+        throw error;
+    });
+
+    return leafletModulePromise;
+}
+
+const isElementVisible = (el) => {
+    if (!el) return false;
+    const rects = el.getClientRects?.();
+    return !!(rects && rects.length && (el.offsetWidth || el.offsetHeight));
+};
+
+const waitForVisibility = (el, attempts = 10) => new Promise((resolve) => {
+    const check = (remaining) => {
+        if (!el) {
+            resolve(false);
+            return;
+        }
+
+        if (isElementVisible(el)) {
+            resolve(true);
+            return;
+        }
+
+        if (remaining <= 0) {
+            resolve(false);
+            return;
+        }
+
+        setTimeout(() => check(remaining - 1), 100);
+    };
+
+    check(attempts);
+});
+
+const initializeDetailMap = (propiedad, scope) => {
+    if (!propiedad?.coords) return;
+
+    const container = scope?.querySelector?.('.property-map')
+        || document.querySelector('.property-map')
+        || scope?.querySelector?.('#detalle-mapa')
+        || document.getElementById('detalle-mapa');
+
+    if (!container || container._leaflet_id) return;
+
+    waitForVisibility(container).then((visible) => {
+        if (!visible || container._leaflet_id) return;
+
+        loadLeafletModule()
+            ?.then((Leaflet) => {
+                if (!Leaflet || container._leaflet_id) return;
+
+                const map = Leaflet.map(container, {
+                    scrollWheelZoom: false,
+                    doubleClickZoom: false,
+                    boxZoom: false,
+                    keyboard: false
+                }).setView(propiedad.coords, 16);
+
+                Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+                Leaflet.marker(propiedad.coords).addTo(map);
+            })
+            .catch((error) => {
+                console.error('Error al inicializar el mapa de la propiedad:', error);
+            });
+    });
+};
 // ============================
 // UTILIDADES
 // ============================
@@ -53,7 +169,7 @@ function mostrarDetalle(propiedad) {
 
     detalle.innerHTML = detalleTemplate(propiedad);
 
-    showSection("detalle-propiedad");
+    const detalleSection = showSection("detalle-propiedad");
 
     const slider = document.querySelector("#detalle-propiedad .slider");
     if (slider) initSlider(slider);
@@ -61,21 +177,8 @@ function mostrarDetalle(propiedad) {
 
     setTimeout(ensureRelatedCarouselInit, 100);
 
-
-    if (propiedad.coords && typeof L !== 'undefined') {
-        setTimeout(() => {
-            const mapEl = document.getElementById("detalle-mapa");
-            if (mapEl && !mapEl._leaflet_id) {
-                const map = L.map(mapEl, {
-                    scrollWheelZoom: false,
-                    doubleClickZoom: false,
-                    boxZoom: false,
-                    keyboard: false
-                }).setView(propiedad.coords, 16);
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
-                L.marker(propiedad.coords).addTo(map);
-            }
-        }, 200);
+    if (detalleSection) {
+        initializeDetailMap(propiedad, detalleSection);
     }
 
     scrollToTop();
@@ -283,25 +386,37 @@ export function initRelatedCarousel() {
 const initPropertyMap = (mapContainer) => {
     if (!mapContainer || mapContainer._leaflet_id) return;
 
-    const map = L.map(mapContainer, {
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false
-    }).setView([-33.4378, -70.6505], 16);
+    waitForVisibility(mapContainer).then((visible) => {
+        if (!visible || mapContainer._leaflet_id) return;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-    }).addTo(map);
+        loadLeafletModule()
+            ?.then((Leaflet) => {
+                if (!Leaflet || mapContainer._leaflet_id) return;
 
-    const polygon = L.polygon([
-        [-33.4376, -70.6510],
-        [-33.4376, -70.6500],
-        [-33.4380, -70.6500],
-        [-33.4380, -70.6510]
-    ]).addTo(map).bindPopup("Área en venta");
+                const map = Leaflet.map(mapContainer, {
+                    scrollWheelZoom: false,
+                    doubleClickZoom: false,
+                    boxZoom: false,
+                    keyboard: false
+                }).setView([-33.4378, -70.6505], 16);
 
-    map.fitBounds(polygon.getBounds());
+                Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                }).addTo(map);
+
+                const polygon = Leaflet.polygon([
+                    [-33.4376, -70.6510],
+                    [-33.4376, -70.6500],
+                    [-33.4380, -70.6500],
+                    [-33.4380, -70.6510]
+                ]).addTo(map).bindPopup("Área en venta");
+
+                map.fitBounds(polygon.getBounds());
+            })
+            .catch((error) => {
+                console.error('Error al inicializar el mapa de la ficha:', error);
+            });
+    });
 };
 
 // ============================

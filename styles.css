@@ -122,7 +122,7 @@ HEADER & NAVIGATION
     box-shadow: var(--shadow);
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 1200;
 }
 
 .header__inner {
