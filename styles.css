@@ -361,13 +361,19 @@ SECCIÓN INICIO - LISTINGS/PROPIEDADES DESTACADAS
 
 .property__media {
     position: relative;
-    height: 260px;
+    height: auto;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
 }
 
+
+.property__media .slides {
+    height: 100%;
+}
 .property__media img {
     width: 100%;
     height: 100%;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
 }
 
@@ -804,7 +810,8 @@ SECCIÓN QUIÉNES SOMOS
 
 .info-card img {
     width: 100%;
-    height: 180px;
+    height: auto;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
 }
 
@@ -1046,7 +1053,8 @@ VISTA DETALLE INDIVIDUAL
 
 .detail-slider {
     position: relative;
-    height: 450px;
+    height: auto;
+    aspect-ratio: 16 / 9;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
@@ -1061,6 +1069,7 @@ VISTA DETALLE INDIVIDUAL
 .detail-slider .slides img {
     width: 100%;
     height: 100%;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
     flex-shrink: 0;
 }
@@ -1388,7 +1397,7 @@ VISTA DETALLE INDIVIDUAL
 
 /* =========================
 PROPIEDADES RELACIONADAS
-========================= */
+/* ========================= */ */
 .related-properties {
     margin-top: 2.5rem;
     padding: 2rem 0;
@@ -1461,13 +1470,15 @@ PROPIEDADES RELACIONADAS
 
 .related-card__image {
     position: relative;
-    height: 170px;
+    height: auto;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
 }
 
 .related-card__image img {
     width: 100%;
     height: 100%;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
     transition: transform 0.4s ease;
 }
@@ -2060,7 +2071,8 @@ RESPONSIVE DESIGN - MOBILE
     }
 
     .property__media {
-        height: 220px;
+        height: auto;
+        aspect-ratio: 4 / 3;
     }
 
     .property__body {
@@ -2123,7 +2135,8 @@ RESPONSIVE DESIGN - MOBILE
     }
 
     .detail-slider {
-        height: 280px;
+        height: auto;
+        aspect-ratio: 16 / 9;
     }
 
     .detail-main {
@@ -2228,7 +2241,8 @@ RESPONSIVE DESIGN - MOBILE
     }
 
     .info-card img {
-        height: 150px;
+        height: auto;
+        aspect-ratio: 4 / 3;
     }
 
     .info-card h3 {
@@ -2259,7 +2273,8 @@ RESPONSIVE DESIGN - MOBILE
     }
 
     .related-card__image {
-        height: 150px;
+        height: auto;
+        aspect-ratio: 4 / 3;
     }
 
     .related-properties h3 {
