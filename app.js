@@ -1,4 +1,4 @@
-import { norm, validateEmail } from './utils.js';
+import { $, norm, validateEmail } from './utils.js';
 import { PROPIEDADES, cardTemplate, detalleTemplate, renderPropiedadesDestacadas } from './propiedades.js';
 
 const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -651,17 +651,23 @@ export function renderPropiedades(lista) {
     const cardsCompra = document.getElementById("cards-compra");
     if (!cardsCompra) return;
 
+    cardsCompra.setAttribute('aria-busy', 'true');
+    
     if (!lista.length) {
         cardsCompra.innerHTML =
             `<p style="padding:1rem;text-align:center;color:#6b7280">
                 No encontramos resultados. Ajusta los filtros y vuelve a intentar.
             </p>`;
+            cardsCompra.setAttribute('data-results-count', '0');
+            cardsCompra.setAttribute('aria-busy', 'false');
         return;
     }
 
     cardsCompra.innerHTML = lista.map(cardTemplate).join("");
     cardsCompra.querySelectorAll(".slider").forEach(initSlider);
     initLightbox(cardsCompra);
+    cardsCompra.setAttribute('data-results-count', String(lista.length));
+    cardsCompra.setAttribute('aria-busy', 'false');
 }
 
 // ============================
@@ -743,35 +749,75 @@ document.addEventListener('click', (e) => {
  */
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.querySelector("#compra form.search");
+    if (!form) return;
+
     const q = $("#q", form);
     const operacion = $("select[name='operacion']", form);
     const tipo = $("select[name='tipo']", form);
 
-    if (!form) return;
+    const readFilters = () => ({
+        q: q?.value?.trim() || "",
+        operacion: operacion?.value || "",
+        tipo: tipo?.value || ""
+    });
 
-    const aplicarFiltros = (e) => {
+    const updateQueryParams = (filters) => {
+        if (typeof history?.replaceState !== "function") return;
+
+        const params = new URLSearchParams();
+        if (filters.q) params.set("q", filters.q);
+        if (filters.operacion) params.set("operacion", filters.operacion);
+        if (filters.tipo) params.set("tipo", filters.tipo);
+
+        const { pathname, hash, search } = window.location;
+        const newSearch = params.toString();
+        const newUrl = `${pathname}${newSearch ? `?${newSearch}` : ""}${hash || ""}`;
+
+        if (`${pathname}${search}${hash || ""}` !== newUrl) {
+            history.replaceState(history.state, "", newUrl);
+        }
+    };
+
+    const aplicarFiltros = (e, { skipHistory } = {}) => {
         e?.preventDefault();
-        const qv = norm(q?.value || "");
-        const ov = operacion?.value || "";
-        const tv = tipo?.value || "";
+        const filters = readFilters();
+        const query = norm(filters.q);
 
         const resultados = PROPIEDADES.filter((p) => {
             const matchQ =
-                !qv ||
-                norm(`${p.titulo} ${p.comuna} ${p.tipo} ${p.id}`).includes(qv);
-            const matchOp = !ov || p.operacion === ov;
-            const matchTipo = !tv || p.tipo === tv;
+                !query ||
+                norm(`${p.titulo} ${p.comuna} ${p.tipo} ${p.id}`).includes(query);
+            const matchOp = !filters.operacion || p.operacion === filters.operacion;
+            const matchTipo = !filters.tipo || p.tipo === filters.tipo;
             return matchQ && matchOp && matchTipo;
         });
 
         renderPropiedades(resultados);
+
+        if (!skipHistory) {
+            updateQueryParams(filters);
+        }
     };
 
-    form.addEventListener("submit", aplicarFiltros);
+    const setControlValue = (control, value) => {
+        if (!control) return;
+        if (control.tagName === "SELECT") {
+            const hasOption = Array.from(control.options || []).some((option) => option.value === value);
+            control.value = hasOption ? value : "";
+        } else {
+            control.value = value || "";
+        }
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    setControlValue(q, params.get("q") || "");
+    setControlValue(operacion, params.get("operacion") || "");
+    setControlValue(tipo, params.get("tipo") || "");
+
+    form.addEventListener("submit", (event) => aplicarFiltros(event));
     [q, operacion, tipo].forEach((el) => el?.addEventListener("change", aplicarFiltros));
 
-    // Render inicial
-    renderPropiedades(PROPIEDADES);
+    aplicarFiltros(null, { skipHistory: true });
 });
 
 // ============================
